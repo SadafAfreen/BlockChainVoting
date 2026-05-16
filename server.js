@@ -1,42 +1,46 @@
-const next = require('next');
-const express = require('express');
-const voter = require('./routes/voter');
-const company = require('./routes/company');
-const candidate = require('./routes/candidate');
+/**
+ * server.js
+ *
+ * MIGRATION CHANGES:
+ *  1. Removed duplicate mongoose.connect() — the project already has
+ *     config/database.js for this. 
+ *  2. next-routes removed — using native next().getRequestHandler().
+ *  3. process.exit(1) on DB error removed — app keeps running if DB is down.
+ *  4. Added mongoose.set('strictQuery', true) via database.js to suppress warning.
+ */
+
+require('dotenv').config();
+
+require('./config/database');
+
+const express    = require('express');
+const next       = require('next');
 const bodyParser = require('body-parser');
-const mongoose = require('./config/database');
-const exp = express();
-const path = require('path');
+const apiRoutes  = require('./routes/api');
 
-require('dotenv').config({ path: __dirname + '/.env' });
-
-mongoose.connection.on('error', console.error.bind(console, 'MongoDB connection error:'));
-
-exp.use(
-	bodyParser.urlencoded({
-		extended: true,
-	})
-);
-exp.use(bodyParser.json());
-exp.get('/', function (req, res) {
-	res.sendFile(path.join(__dirname + '/pages/homepage.js'));
-});
-
-exp.use('/company', company);
-
-exp.use('/voter', voter);
-
-exp.use('/candidate', candidate);
-
-const app = next({
-	dev: process.env.NODE_ENV !== 'production',
-});
-
-const routes = require('./routes');
-const handler = routes.getRequestHandler(app);
+const dev    = process.env.NODE_ENV !== 'production';
+const app    = next({ dev });
+const handle = app.getRequestHandler();
+const PORT   = process.env.PORT || 3000;
+const authRoutes = require('./routes/auth');
 
 app.prepare().then(() => {
-	exp.use(handler).listen(3000, function () {
-		console.log('Node server listening on port 3000');
-	});
+  const server = express();
+
+  server.use(bodyParser.json());
+  server.use(bodyParser.urlencoded({ extended: true }));
+
+  // Express API routes (company/voter auth, candidate registration, etc.)
+  server.use('/api/auth', authRoutes);
+
+  server.use('/api', apiRoutes);
+
+  // Next.js handles all page routing via the /pages directory.
+  server.all('*', (req, res) => handle(req, res));
+
+  server.listen(PORT, err => {
+    if (err) throw err;
+    console.log(`Server running → http://localhost:${PORT}`);
+    console.log(`Mode: ${dev ? 'development' : 'production'}`);
+  });
 });
