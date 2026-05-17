@@ -1,23 +1,26 @@
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
-import { Link } from '../routes';
+import Link from 'next/link';                        // CHANGED: was import { Link } from '../routes'
+import Head from 'next/head';                        // CHANGED: was import { Helmet } from 'react-helmet'
 import {
 	Button,
 	Container,
-	Divider,
 	Grid,
 	Header,
 	Icon,
 	Image,
-	List,
 	Menu,
-	Responsive,
 	Segment,
-	Sidebar,
 	Visibility,
 } from 'semantic-ui-react';
-import '../static/hometest.css';
-import { Helmet } from 'react-helmet';
+// CHANGED: removed import '../static/hometest.css'
+// CSS files must be imported in pages/_app.js, not inside page components.
+// Add this line to pages/_app.js:   import '../static/hometest.css';
+// After renaming /static → /public, update to: import '../public/hometest.css'
+
+// CHANGED: removed import { Responsive } from 'semantic-ui-react'
+// Responsive was removed in semantic-ui-react v2. Replaced with a plain <div>.
+
 const HomepageHeading = ({ mobile }) => (
 	<Container text className="cont">
 		<Header
@@ -47,7 +50,8 @@ const HomepageHeading = ({ mobile }) => (
 			<Header as="h4" style={{ color: 'grey' }}>
 				Register/ Sign in for the company
 			</Header>
-			<Link route="./company_login">
+			{/* CHANGED: <Link route="./company_login"> → <Link href="/company_login"> */}
+			<Link href="/company_login">
 				<Button primary size="huge" style={{ color: 'white', backgroundColor: '#627eea' }}>
 					<Icon name="left arrow" />
 					Company
@@ -60,7 +64,8 @@ const HomepageHeading = ({ mobile }) => (
 				{' '}
 				Sign in for Voters!
 			</Header>
-			<Link route="/voter_login">
+			{/* CHANGED: <Link route="/voter_login"> → <Link href="/voter_login"> */}
+			<Link href="/voter_login">
 				<Button primary size="huge" style={{ color: 'white', backgroundColor: '#627eea' }}>
 					Voters
 					<Icon name="right arrow" />
@@ -85,12 +90,17 @@ class DesktopContainer extends Component {
 		const { fixed } = this.state;
 
 		return (
-			<Responsive>
-				<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css" />
-				<Helmet>
+			// CHANGED: <Responsive> → <div>
+			// Responsive was removed from semantic-ui-react v2+.
+			<div>
+				{/* CHANGED: removed <link rel="stylesheet" href="//cdn..."> — loaded in _app.js */}
+
+				{/* CHANGED: <Helmet><title>...</title></Helmet> → <Head><title>...</title></Head> */}
+				<Head>
 					<title>HomePage</title>
-					<link rel="shortcut icon" type="image/x-icon" href="../../static/logo3.png" />
-				</Helmet>
+					<link rel="shortcut icon" type="image/x-icon" href="/public/logo3.png" />
+				</Head>
+
 				<Visibility once={false} onBottomPassed={this.showFixedMenu} onBottomPassedReverse={this.hideFixedMenu}>
 					<Segment inverted textAlign="center" style={{ minHeight: 700, padding: '1em 0em' }} vertical>
 						<Menu
@@ -120,7 +130,7 @@ class DesktopContainer extends Component {
 				</Visibility>
 
 				{children}
-			</Responsive>
+			</div>
 		);
 	}
 }
@@ -159,7 +169,9 @@ const HomepageLayout = () => (
 							Not even a single chance of shutting <br /> down of the system.
 						</p>
 					</Grid.Column>
-					<Image src="../static/ether2.png" width="216" height="256" style={{ paddingTop: '50px' }} />
+					{/* CHANGED: src="../static/ether2.png" → src="/static/ether2.png" */}
+					{/* Relative paths break in Next.js — must always use absolute path from root */}
+					<Image src="/public/ether2.png" width="216" height="256" style={{ paddingTop: '50px' }} />
 
 					<Grid.Column style={{ paddingBottom: '5em', paddingTop: '5em' }}>
 						<Header as="h3" style={{ fontSize: '2em' }}>
@@ -195,4 +207,5 @@ const HomepageLayout = () => (
 		</Segment>
 	</ResponsiveContainer>
 );
+
 export default HomepageLayout;
