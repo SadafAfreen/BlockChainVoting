@@ -1,96 +1,121 @@
 import React, { Component } from 'react';
-import { Button, Form, Grid, Header, Image, Message, Segment } from 'semantic-ui-react';
+import { Button, Form, Message, Icon, Header } from 'semantic-ui-react';
+import Head from 'next/head';
+import { withRouter } from 'next/router';
 import Cookies from 'js-cookie';
-import { Router } from '../routes';
-import { Helmet } from 'react-helmet';
 
-class LoginForm extends Component {
-	state = {
-		election_address: '',
-	};
+class VoterLogin extends Component {
+  state = { loading: false, error: '' };
 
-	LoginForm = () => (
-		<div className="login-form">
-			<style JSX>{`
-                .login-form {
-                    width:100%;
-                    height:100%;
-                    position:absolute;
-                    background: url('/static/blockchain.jpg') no-repeat;
-                } 
-              `}</style>
+  signin = async () => {
+    const email    = document.getElementById('signin_email').value;
+    const password = document.getElementById('signin_password').value;
 
-			<Grid textAlign="center" style={{ height: '100%' }} verticalAlign="middle">
-				<Grid.Column style={{ maxWidth: 380 }}>
-					<Form size="large">
-						<Segment>
-							<Header as="h2" color="black" textAlign="center" style={{ marginTop: 10 }}>
-								Login
-							</Header>
-							<Form.Input
-								fluid
-								icon="user"
-								iconPosition="left"
-								placeholder="Email"
-								style={{ padding: 5 }}
-								id="signin_email"
-							/>
-							<Form.Input
-								style={{ padding: 5 }}
-								fluid
-								id="signin_password"
-								icon="lock"
-								iconPosition="left"
-								placeholder="Password"
-								type="password"
-							/>
+    if (!email || !password) {
+      this.setState({ error: 'Please enter your email and password.' });
+      return;
+    }
 
-							<Button color="blue" fluid size="large" style={{ marginBottom: 15 }} onClick={this.signin}>
-								Submit
-							</Button>
-						</Segment>
-					</Form>
-				</Grid.Column>
-			</Grid>
-		</div>
-	);
-	signin = event => {
-		const email = document.getElementById('signin_email').value;
-		const password = document.getElementById('signin_password').value;
-		var http = new XMLHttpRequest();
-		var url = 'voter/authenticate';
-		var params = 'email=' + email + '&password=' + password;
-		http.open('POST', url, true);
-		//Send the proper header information along with the request
-		http.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-		http.onreadystatechange = function () {
-			//Call a function when the state changes.
-			if (http.readyState == 4 && http.status == 200) {
-				var responseObj = JSON.parse(http.responseText);
-				if (responseObj.status == 'success') {
-					Cookies.set('voter_email', encodeURI(email));
-					Cookies.set('address', encodeURI(responseObj.data.election_address));
-					Router.pushRoute(`/election/${responseObj.data.election_address}/vote`);
-				} else {
-					alert(responseObj.message);
-				}
-			}
-		};
-		http.send(params);
-	};
+    this.setState({ loading: true, error: '' });
 
-	render() {
-		return (
-			<div>
-				<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css" />
-				<Helmet>
-					<title>Voter login</title>
-					<link rel="shortcut icon" type="image/x-icon" href="../../static/logo3.png" />
-				</Helmet>
-				{this.LoginForm()}
-			</div>
-		);
-	}
+    try {
+      const res  = await fetch('/api/auth/voter-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+
+      if (data.status === 'success') {
+        Cookies.set('voter_email', encodeURI(email));
+        Cookies.set('address',     encodeURI(data.election_address));
+        this.props.router.push('/vote');
+      } else {
+        this.setState({ error: data.message || 'Invalid credentials.' });
+      }
+    } catch (err) {
+      this.setState({ error: 'Network error. Please try again.' });
+    } finally {
+      this.setState({ loading: false });
+    }
+  };
+
+  render() {
+    const { loading, error } = this.state;
+
+    return (
+      <div>
+        <Head>
+          <title>Voter Login | BlockVotes</title>
+        </Head>
+
+        <div style={{
+          minHeight: '100vh',
+          background: "linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)",
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '2rem',
+        }}>
+          <div style={{ width: '100%', maxWidth: 420 }}>
+
+            {/* Logo / title */}
+            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+              <Icon name="checkmark" size="huge" style={{ color: '#4fc3f7' }} />
+              <Header as="h1" style={{ color: 'white', marginTop: '0.5rem', fontWeight: 700 }}>
+                BlockVotes
+              </Header>
+              <p style={{ color: '#aaa', margin: 0 }}>Voter Portal</p>
+            </div>
+
+            {/* Card */}
+            <div style={{
+              background: 'rgba(255,255,255,0.07)',
+              backdropFilter: 'blur(12px)',
+              borderRadius: 16,
+              padding: '2rem',
+              border: '1px solid rgba(255,255,255,0.12)',
+            }}>
+              <h3 style={{ color: 'white', textAlign: 'center', marginBottom: '1.5rem' }}>
+                Sign in to cast your vote
+              </h3>
+
+              {error && (
+                <Message negative style={{ marginBottom: '1rem' }}>
+                  <Icon name="exclamation circle" /> {error}
+                </Message>
+              )}
+
+              <Form size="large">
+                <Form.Input
+                  fluid id="signin_email" icon="mail"
+                  iconPosition="left" placeholder="Your Email"
+                  style={{ marginBottom: 12 }}
+                />
+                <Form.Input
+                  fluid id="signin_password" icon="lock"
+                  iconPosition="left" placeholder="Password"
+                  type="password" style={{ marginBottom: 20 }}
+                />
+                <Button
+                  onClick={this.signin} loading={loading}
+                  disabled={loading} fluid size="large"
+                  style={{ background: '#4fc3f7', color: '#0f2027', fontWeight: 700 }}
+                >
+                  <Icon name="sign in" /> Sign In
+                </Button>
+              </Form>
+            </div>
+
+            <p style={{ color: '#aaa', textAlign: 'center', marginTop: '1.5rem', fontSize: '0.9rem' }}>
+              Are you a company?{' '}
+              <a href="/company_login" style={{ color: '#4fc3f7' }}>Company Login →</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 }
 
-export default LoginForm;
+export default withRouter(VoterLogin);
