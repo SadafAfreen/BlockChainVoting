@@ -1,5 +1,5 @@
 const CompanyModel = require('../models/company');
-const bcrypt = require('bcrypt'); 
+const bcrypt = require('bcryptjs'); 
 const path = require('path');
 module.exports = {
     create: function(req, res, cb) {
